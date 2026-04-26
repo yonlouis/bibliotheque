@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1a1208" />
+  <meta name="description" content="Votre bibliothèque de lecture immersive" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Bibliothèque" />
+  <title>Ma Bibliothèque</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=IM+Fell+English:ital@0;1&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --cream: #f5efe0;
+      --cream-dark: #e8dcc8;
+      --ink: #1a1208;
+      --ink-light: #3d2e14;
+      --ink-faded: #7a6548;
+      --gold: #b8860b;
+      --gold-light: #d4a017;
+      --gold-pale: #e8c97a;
+      --red-wax: #8b2020;
+      --spine-blue: #1a2744;
+      --spine-green: #1a3322;
+      --spine-burgundy: #4a1020;
+      --shadow: rgba(26,18,8,0.18);
+      --shadow-deep: rgba(26,18,8,0.38);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      font-family: 'Crimson Pro', Georgia, serif;
+      background: var(--ink);
+      color: var(--cream);
+      overflow: hidden;
+    }
+
+    /* ── GRAIN OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.6;
+    }
+
+    /* ── APP SHELL ── */
+    #app {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(160deg, #1a1208 0%, #0f0b05 60%, #12100a 100%);
+    }
+
+    /* ── HEADER ── */
+    header {
+      padding: 18px 24px 14px;
+      border-bottom: 1px solid rgba(184,134,11,0.2);
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      flex-shrink: 0;
+      background: linear-gradient(180deg, rgba(26,18,8,0.9) 0%, transparent 100%);
+    }
+
+    header h1 {
+      font-family: 'IM Fell English', serif;
+      font-size: 1.5rem;
+      color: var(--gold-pale);
+      letter-spacing: 0.04em;
+      font-weight: normal;
+    }
+
+    header .subtitle {
+      font-family: 'Crimson Pro', serif;
+      font-size: 0.85rem;
+      color: var(--ink-faded);
+      font-style: italic;
+      letter-spacing: 0.06em;
+    }
+
+    header .actions {
+      margin-left: auto;
+      display: flex;
+      gap: 10px;
+    }
+
+    /* ── NAV TABS ── */
+    nav {
+      display: flex;
+      border-bottom: 1px solid rgba(184,134,11,0.15);
+      flex-shrink: 0;
+      padding: 0 20px;
+    }
+
+    nav button {
+      background: none;
+      border: none;
+      color: var(--ink-faded);
+      font-family: 'Crimson Pro', serif;
+      font-size: 0.9rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 10px 16px 8px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+      position: relative;
+      top: 1px;
+    }
+
+    nav button.active {
+      color: var(--gold-pale);
+      border-bottom-color: var(--gold);
+    }
+
+    nav button:hover:not(.active) {
+      color: var(--cream-dark);
+    }
+
+    /* ── MAIN CONTENT ── */
+    main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 20px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--ink-faded) transparent;
+    }
+
+    main::-webkit-scrollbar { width: 4px; }
+    main::-webkit-scrollbar-thumb { background: var(--ink-faded); border-radius: 2px; }
+
+    /* ── SECTION HEADERS ── */
+    .section-label {
+      font-family: 'Crimson Pro', serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-faded);
+      margin-bottom: 14px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(122,101,72,0.2);
+    }
+
+    /* ── BOOKSHELF ── */
+    .shelf {
+      margin-bottom: 32px;
+    }
+
+    .books-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 14px;
+    }
+
+    /* ── BOOK SPINE / CARD ── */
+    .book-card {
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      animation: fadeIn 0.4s ease both;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .book-spine {
+      width: 72px;
+      height: 110px;
+      border-radius: 2px 5px 5px 2px;
+      position: relative;
+      box-shadow:
+        -3px 0 6px rgba(0,0,0,0.4),
+        3px 3px 10px var(--shadow-deep),
+        inset -1px 0 3px rgba(255,255,255,0.06);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .book-card:hover .book-spine {
+      transform: translateY(-4px) rotate(-1deg);
+      box-shadow:
+        -3px 0 6px rgba(0,0,0,0.5),
+        6px 8px 18px var(--shadow-deep),
+        inset -1px 0 3px rgba(255,255,255,0.08);
+    }
+
+    .book-spine::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 6px;
+      height: 100%;
+      background: rgba(0,0,0,0.25);
+    }
+
+    .book-spine::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent 30%, rgba(255,255,255,0.04) 60%, transparent 100%);
+    }
+
+    .book-spine-title {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      transform: rotate(180deg);
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 0.62rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.88);
+      text-align: center;
+      padding: 6px 2px;
+      max-height: 90px;
+      overflow: hidden;
+      position: relative;
+      z-index: 1;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+
+    .book-meta {
+      text-align: center;
+    }
+
+    .book-meta .title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 0.7rem;
+      color: var(--cream-dark);
+      line-height: 1.3;
+      max-width: 80px;
+    }
+
+    .book-meta .author {
+      font-family: 'Crimson Pro', serif;
+      font-size: 0.62rem;
+      color: var(--ink-faded);
+      font-style: italic;
+      margin-top: 2px;
+    }
+
+    .book-progress {
+      width: 72px;
+      height: 2px;
+      background: rgba(122,101,72,0.2);
+      border-radius: 1px;
+      margin-top: 2px;
+    }
+
+    .book-progress-fill {
+      height: 100%;
+      background: var(--gold);
+      border-radius: 1px;
+      transition: width 0.4s ease;
+    }
+
+    /* ── SPINE COLORS ── */
+    .color-0 { background: linear-gradient(135deg, #1a2744 0%, #243560 100%); }
+    .color-1 { background: linear-gradient(135deg, #1a3322 0%, #234a2f 100%); }
+    .color-2 { background: linear-gradient(135deg, #4a1020 0%, #6b1828 100%); }
+    .color-3 { background: linear-gradient(135deg, #2d2010 0%, #3f2d15 100%); }
+    .color-4 { background: linear-gradient(135deg, #1a1a3a 0%, #252550 100%); }
+    .color-5 { background: linear-gradient(135deg, #3a1a0a 0%, #542610 100%); }
+
+    /* ── ADD BOOK BUTTON ── */
+    .add-book-card {
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .add-book-spine {
+      width: 72px;
+      height: 110px;
+      border-radius: 2px 5px 5px 2px;
+      border: 1px dashed rgba(122,101,72,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s, background 0.2s;
+      background: rgba(122,101,72,0.04);
+    }
+
+    .add-book-card:hover .add-book-spine {
+      border-color: var(--gold);
+      background: rgba(184,134,11,0.06);
+    }
+
+    .add-icon {
+      font-size: 1.4rem;
+      color: var(--ink-faded);
+      transition: color 0.2s;
+    }
+
+    .add-book-card:hover .add-icon { color: var(--gold); }
+
+    .add-book-card .book-meta .title {
+      color: var(--ink-faded);
+      font-style: italic;
+    }
+
+    /* ── BOOK DETAIL VIEW ── */
+    #detail-view {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    #detail-view.active { display: flex; }
+
+    .detail-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid rgba(184,134,11,0.15);
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+
+    .detail-back {
+      background: none;
+      border: none;
+      color: var(--gold);
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 2px 4px;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .detail-book-info h2 {
+      font-family: 'IM Fell English', serif;
+      font-size: 1.15rem;
+      color: var(--gold-pale);
+      font-weight: normal;
+      line-height: 1.2;
+    }
+
+    .detail-book-info .author-year {
+      font-family: 'Crimson Pro', serif;
+      font-size: 0.85rem;
+      color: var(--ink-faded);
+      font-style: italic;
+      margin-top: 3px;
+    }
+
+    .detail-progress-bar {
+      width: 100%;
+      height: 3px;
+      background: rgba(122,101,72,0.15);
+      margin-top: 8px;
+    }
+
+    .detail-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold), var(--gold-light));
+      transition: width 0.5s ease;
+    }
+
+    .detail-progress-text {
+      font-size: 0.72rem;
+      color: var(--ink-faded);
+      letter-spacing: 0.06em;
+      margin-top: 4px;
+    }
+
+    /* ── CHAPTERS LIST ── */
+    .chapters-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--ink-faded) transparent;
+    }
+
+    .chapter-item {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(122,101,72,0.1);
+      cursor: pointer;
+      transition: background 0.15s;
+      border-radius: 3px;
+      padding-left: 6px;
+      padding-right: 6px;
+    }
+
+    .chapter-item:hover { background: rgba(184,134,11,0.05); }
+
+    .chapter-item.current {
+      background: rgba(184,134,11,0.08);
+      border-left: 2px solid var(--gold);
+      padding-left: 10px;
+    }
+
+    .chapter-item.read { opacity: 0.55; }
+
+    .chapter-num {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 0.72rem;
+      color: var(--ink-faded);
+      letter-spacing: 0.1em;
+      flex-shrink: 0;
+      min-width: 32px;
+    }
+
+    .chapter-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 0.95rem;
+      color: var(--cream);
+      flex: 1;
+      line-height: 1.3;
+    }
+
+    .chapter-status {
+      font-size: 0.65rem;
+      flex-shrink: 0;
+    }
+
+    /* ── CHAPTER CONTENT ── */
+    #chapter-view {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    #chapter-view.active { display: flex; }
+
+    .chapter-nav {
+      padding: 14px 20px 10px;
+      border-bottom: 1px solid rgba(184,134,11,0.15);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .chapter-nav h2 {
+      font-family: 'IM Fell English', serif;
+      font-size: 1rem;
+      color: var(--gold-pale);
+      font-weight: normal;
+      flex: 1;
+      line-height: 1.25;
+    }
+
+    .chapter-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 20px 40px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--ink-faded) transparent;
+    }
+
+    .chapter-content h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin: 20px 0 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(184,134,11,0.15);
+    }
+
+    .chapter-content h3:first-child { margin-top: 0; }
+
+    .chapter-content p {
+      font-family: 'Crimson Pro', serif;
+      font-size: 1rem;
+      line-height: 1.72;
+      color: var(--cream-dark);
+      margin-bottom: 10px;
+    }
+
+    .chapter-content blockquote {
+      border-left: 2px solid var(--gold);
+      padding: 8px 14px;
+      margin: 14px 0;
+      background: rgba(184,134,11,0.05);
+      border-radius: 0 3px 3px 0;
+    }
+
+    .chapter-content blockquote p {
+      font-family: 'IM Fell English', serif;
+      font-style: italic;
+      color: var(--gold-pale);
+      font-size: 0.95rem;
+      margin: 0;
+    }
+
+    .chapter-content .reflection {
+      background: rgba(122,101,72,0.08);
+      border: 1px solid rgba(122,101,72,0.2);
+      border-radius: 3px;
+      padding: 12px 14px;
+      margin-top: 16px;
+    }
+
+    .chapter-content .reflection p {
+      font-style: italic;
+      color: var(--ink-faded);
+      font-size: 0.9rem;
+      margin: 0;
+    }
+
+    /* ── ADD BOOK MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10,7,3,0.85);
+      z-index: 100;
+      align-items: flex-end;
+    }
+
+    .modal-overlay.active { display: flex; }
+
+    .modal {
+      background: linear-gradient(160deg, #1e1608 0%, #13100a 100%);
+      border-top: 1px solid rgba(184,134,11,0.2);
+      border-radius: 16px 16px 0 0;
+      padding: 24px 20px 36px;
+      width: 100%;
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+
+    .modal h3 {
+      font-family: 'IM Fell English', serif;
+      font-size: 1.1rem;
+      color: var(--gold-pale);
+      font-weight: normal;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-family: 'Crimson Pro', serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink-faded);
+      margin-bottom: 6px;
+    }
+
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      background: rgba(122,101,72,0.08);
+      border: 1px solid rgba(122,101,72,0.2);
+      border-radius: 4px;
+      padding: 10px 12px;
+      color: var(--cream);
+      font-family: 'Crimson Pro', serif;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: var(--gold);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+      line-height: 1.5;
+    }
+
+    .form-group select option {
+      background: #1a1208;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn-primary {
+      flex: 1;
+      background: var(--gold);
+      color: var(--ink);
+      border: none;
+      border-radius: 4px;
+      padding: 11px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 0.95rem;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .btn-primary:hover { background: var(--gold-light); }
+
+    .btn-ghost {
+      background: none;
+      border: 1px solid rgba(122,101,72,0.3);
+      color: var(--ink-faded);
+      border-radius: 4px;
+      padding: 11px 18px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--ink-faded);
+    }
+
+    .empty-state .icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+
+    .empty-state p {
+      font-family: 'Crimson Pro', serif;
+      font-style: italic;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* ── FLOATING ADD BTN ── */
+    .fab {
+      position: fixed;
+      bottom: 24px;
+      right: 20px;
+      width: 48px;
+      height: 48px;
+      background: var(--gold);
+      color: var(--ink);
+      border: none;
+      border-radius: 50%;
+      font-size: 1.4rem;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(184,134,11,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+      z-index: 50;
+    }
+
+    .fab:hover {
+      transform: scale(1.08);
+      box-shadow: 0 6px 22px rgba(184,134,11,0.4);
+    }
+
+    /* ── CHAPTER CONTENT PASTE AREA ── */
+    .paste-hint {
+      font-family: 'Crimson Pro', serif;
+      font-size: 0.85rem;
+      color: var(--ink-faded);
+      font-style: italic;
+      text-align: center;
+      padding: 32px 20px;
+      border: 1px dashed rgba(122,101,72,0.2);
+      border-radius: 4px;
+      margin-top: 12px;
+    }
+
+    /* ── CHAPTER NAV ARROWS ── */
+    .chapter-arrows {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 20px 8px;
+      border-top: 1px solid rgba(184,134,11,0.1);
+      flex-shrink: 0;
+    }
+
+    .arrow-btn {
+      background: none;
+      border: 1px solid rgba(122,101,72,0.2);
+      color: var(--ink-faded);
+      font-family: 'Crimson Pro', serif;
+      font-size: 0.82rem;
+      padding: 6px 14px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.06em;
+    }
+
+    .arrow-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .arrow-btn:disabled { opacity: 0.2; cursor: default; }
+    .arrow-btn:disabled:hover { border-color: rgba(122,101,72,0.2); color: var(--ink-faded); }
+
+    /* ── ADD CHAPTER FORM ── */
+    #add-chapter-section {
+      padding: 16px 20px;
+      border-top: 1px solid rgba(184,134,11,0.1);
+      flex-shrink: 0;
+    }
+
+    #add-chapter-section summary {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink-faded);
+      cursor: pointer;
+      list-style: none;
+      padding: 4px 0;
+    }
+
+    #add-chapter-section summary:hover { color: var(--gold); }
+
+    #add-chapter-section .form-group {
+      margin-top: 12px;
+    }
+
+    /* ── SCROLLBAR ── */
+    .chapters-list::-webkit-scrollbar, .chapter-content::-webkit-scrollbar { width: 3px; }
+    .chapters-list::-webkit-scrollbar-thumb, .chapter-content::-webkit-scrollbar-thumb {
+      background: var(--ink-faded); border-radius: 2px;
+    }
+
+    /* ── ORNAMENT ── */
+    .ornament {
+      text-align: center;
+      color: var(--gold);
+      opacity: 0.3;
+      font-size: 0.9rem;
+      margin: 6px 0;
+      letter-spacing: 0.3em;
+    }
+
+    /* ── RESPONSIVE tweaks ── */
+    @media (min-width: 420px) {
+      .books-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+      .book-spine, .add-book-spine { width: 80px; height: 124px; }
+      .book-progress { width: 80px; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══════ HOME VIEW ══════ -->
+  <div id="home-view">
+    <header>
+      <h1>Ma Bibliothèque</h1>
+      <span class="subtitle">compagnon de lecture</span>
+    </header>
+
+    <nav>
+      <button class="active" onclick="showTab('en-cours')">En cours</button>
+      <button onclick="showTab('termines')">Terminés</button>
+      <button onclick="showTab('tous')">Tous</button>
+    </nav>
+
+    <main id="home-main">
+      <!-- dynamically rendered -->
+    </main>
+
+    <button class="fab" onclick="openAddBookModal()" title="Ajouter un livre">+</button>
+  </div>
+
+  <!-- ══════ BOOK DETAIL VIEW ══════ -->
+  <div id="detail-view">
+    <div class="detail-header">
+      <button class="detail-back" onclick="goHome()">&#8592;</button>
+      <div class="detail-book-info" style="flex:1">
+        <h2 id="detail-title"></h2>
+        <div class="author-year" id="detail-author"></div>
+        <div class="detail-progress-bar">
+          <div class="detail-progress-fill" id="detail-progress-fill"></div>
+        </div>
+        <div class="detail-progress-text" id="detail-progress-text"></div>
+      </div>
+      <button class="btn-ghost" style="font-size:0.75rem;padding:6px 10px" onclick="openAddChapterModal()">+ Chapitre</button>
+    </div>
+
+    <div class="chapters-list" id="chapters-list"></div>
+
+    <div id="add-chapter-section" style="display:none">
+      <details>
+        <summary>Ajouter un chapitre</summary>
+        <div class="form-group">
+          <label>Numéro</label>
+          <input type="number" id="new-ch-num" min="1" placeholder="ex. 5" />
+        </div>
+        <div class="form-group">
+          <label>Titre (optionnel)</label>
+          <input type="text" id="new-ch-title" placeholder="ex. La cérémonie du Chant de la Nuit" />
+        </div>
+        <div class="form-group">
+          <label>Contenu du guide</label>
+          <textarea id="new-ch-content" placeholder="Colle ici le résumé immersif généré par Claude..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-primary" onclick="saveNewChapter()">Enregistrer</button>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ══════ CHAPTER VIEW ══════ -->
+  <div id="chapter-view">
+    <div class="chapter-nav">
+      <button class="detail-back" onclick="goToDetail()">&#8592;</button>
+      <h2 id="chapter-view-title"></h2>
+    </div>
+    <div class="chapter-content" id="chapter-view-content"></div>
+    <div class="chapter-arrows">
+      <button class="arrow-btn" id="prev-ch-btn" onclick="navigateChapter(-1)">&#8592; Précédent</button>
+      <button class="arrow-btn" id="mark-read-btn" onclick="markChapterRead()">Marquer lu</button>
+      <button class="arrow-btn" id="next-ch-btn" onclick="navigateChapter(1)">Suivant &#8594;</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════ ADD BOOK MODAL ══════ -->
+<div class="modal-overlay" id="add-book-modal">
+  <div class="modal">
+    <h3>Ajouter un livre</h3>
+    <div class="form-group">
+      <label>Titre</label>
+      <input type="text" id="book-title-input" placeholder="ex. La Voie de l'Ennemi" />
+    </div>
+    <div class="form-group">
+      <label>Auteur</label>
+      <input type="text" id="book-author-input" placeholder="ex. Tony Hillerman" />
+    </div>
+    <div class="form-group">
+      <label>Année</label>
+      <input type="number" id="book-year-input" placeholder="ex. 1970" min="1000" max="2099" />
+    </div>
+    <div class="form-group">
+      <label>Statut</label>
+      <select id="book-status-input">
+        <option value="en-cours">En cours</option>
+        <option value="termine">Terminé</option>
+        <option value="a-lire">À lire</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Nombre de chapitres</label>
+      <input type="number" id="book-chapters-input" placeholder="ex. 18" min="1" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">Annuler</button>
+      <button class="btn-primary" onclick="saveBook()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ ADD CHAPTER MODAL ══════ -->
+<div class="modal-overlay" id="add-chapter-modal">
+  <div class="modal">
+    <h3>Nouveau chapitre</h3>
+    <div class="form-group">
+      <label>Numéro du chapitre</label>
+      <input type="number" id="modal-ch-num" min="1" placeholder="ex. 5" />
+    </div>
+    <div class="form-group">
+      <label>Titre (optionnel)</label>
+      <input type="text" id="modal-ch-title" placeholder="ex. La cérémonie du Chant de la Nuit" />
+    </div>
+    <div class="form-group">
+      <label>Guide complet (résumé Claude)</label>
+      <textarea id="modal-ch-content" placeholder="Colle ici le guide généré par Claude pour ce chapitre..." style="min-height:120px"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">Annuler</button>
+      <button class="btn-primary" onclick="saveModalChapter()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+let state = {
+  books: [],
+  activeTab: 'en-cours',
+  currentBookId: null,
+  currentChapterIdx: null
+};
+
+// ══════════════════════════════════════
+// PERSISTENCE
+// ══════════════════════════════════════
+function save() {
+  try { localStorage.setItem('bibliotheque_v1', JSON.stringify(state)); } catch(e) {}
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem('bibliotheque_v1');
+    if (raw) state = JSON.parse(raw);
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════
+// SPINE COLORS
+// ══════════════════════════════════════
+function spineColor(idx) { return 'color-' + (idx % 6); }
+
+// ══════════════════════════════════════
+// RENDER HOME
+// ══════════════════════════════════════
+function showTab(tab) {
+  state.activeTab = tab;
+  document.querySelectorAll('nav button').forEach((b,i) => {
+    b.classList.toggle('active', ['en-cours','termines','tous'][i] === tab);
+  });
+  renderHome();
+}
+
+function renderHome() {
+  const main = document.getElementById('home-main');
+  let books = state.books;
+  if (state.activeTab === 'en-cours') books = books.filter(b => b.status === 'en-cours');
+  else if (state.activeTab === 'termines') books = books.filter(b => b.status === 'termine');
+
+  if (books.length === 0 && state.books.length === 0) {
+    main.innerHTML = `<div class="empty-state"><div class="icon">&#128218;</div><p>Votre bibliothèque est vide.<br>Ajoutez votre premier livre<br>avec le bouton <strong>+</strong>.</p></div>`;
+    return;
+  }
+
+  let html = `<div class="shelf"><div class="section-label">${books.length} volume${books.length > 1 ? 's' : ''}</div><div class="books-grid">`;
+
+  books.forEach((book, i) => {
+    const progress = bookProgress(book);
+    const globalIdx = state.books.findIndex(b => b.id === book.id);
+    html += `
+    <div class="book-card" onclick="openBook('${book.id}')">
+      <div class="book-spine ${spineColor(globalIdx)}">
+        <div class="book-spine-title">${book.title}</div>
+      </div>
+      <div class="book-progress"><div class="book-progress-fill" style="width:${progress}%"></div></div>
+      <div class="book-meta">
+        <div class="title">${book.title}</div>
+        <div class="author">${book.author}</div>
+      </div>
+    </div>`;
+  });
+
+  if (state.activeTab !== 'termines') {
+    html += `<div class="add-book-card" onclick="openAddBookModal()">
+      <div class="add-book-spine"><span class="add-icon">+</span></div>
+      <div class="book-meta"><div class="title">Nouveau livre</div></div>
+    </div>`;
+  }
+
+  html += '</div></div>';
+  main.innerHTML = html;
+}
+
+function bookProgress(book) {
+  if (!book.chapters || book.chapters.length === 0) return 0;
+  const total = book.totalChapters || book.chapters.length;
+  const read = book.chapters.filter(c => c.read).length;
+  return Math.round((read / total) * 100);
+}
+
+// ══════════════════════════════════════
+// BOOK DETAIL
+// ══════════════════════════════════════
+function openBook(id) {
+  state.currentBookId = id;
+  const book = state.books.find(b => b.id === id);
+  if (!book) return;
+
+  document.getElementById('detail-title').textContent = book.title;
+  document.getElementById('detail-author').textContent = `${book.author}${book.year ? ' · ' + book.year : ''}`;
+
+  const p = bookProgress(book);
+  document.getElementById('detail-progress-fill').style.width = p + '%';
+  document.getElementById('detail-progress-text').textContent = `${p}% — ${book.chapters.filter(c=>c.read).length} / ${book.totalChapters || book.chapters.length} chapitres lus`;
+
+  renderChaptersList(book);
+  showView('detail');
+}
+
+function renderChaptersList(book) {
+  const container = document.getElementById('chapters-list');
+  if (!book.chapters || book.chapters.length === 0) {
+    container.innerHTML = `<div class="empty-state" style="padding:32px 20px"><p>Aucun chapitre enregistré.<br>Utilisez <em>+ Chapitre</em> pour ajouter<br>le guide généré par Claude.</p></div>`;
+    return;
+  }
+
+  const currentCh = book.chapters.find(c => !c.read);
+  let html = '';
+  book.chapters.sort((a,b) => a.num - b.num).forEach((ch, idx) => {
+    const isCurrent = currentCh && ch.num === currentCh.num;
+    const cls = ch.read ? 'chapter-item read' : isCurrent ? 'chapter-item current' : 'chapter-item';
+    html += `<div class="${cls}" onclick="openChapter('${book.id}', ${idx})">
+      <span class="chapter-num">Ch. ${ch.num}</span>
+      <span class="chapter-title">${ch.title || 'Sans titre'}</span>
+      <span class="chapter-status">${ch.read ? '&#10003;' : isCurrent ? '&#9656;' : ''}</span>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+// ══════════════════════════════════════
+// CHAPTER VIEW
+// ══════════════════════════════════════
+function openChapter(bookId, chIdx) {
+  state.currentBookId = bookId;
+  state.currentChapterIdx = chIdx;
+  const book = state.books.find(b => b.id === bookId);
+  if (!book) return;
+  const chapters = [...book.chapters].sort((a,b) => a.num - b.num);
+  const ch = chapters[chIdx];
+  if (!ch) return;
+
+  document.getElementById('chapter-view-title').textContent = `Ch. ${ch.num}${ch.title ? ' — ' + ch.title : ''}`;
+
+  const content = document.getElementById('chapter-view-content');
+  if (ch.content) {
+    content.innerHTML = formatChapterContent(ch.content);
+  } else {
+    content.innerHTML = `<div class="paste-hint">Ce chapitre n'a pas encore de guide.<br>Modifiez-le pour y coller le contenu généré par Claude.</div>`;
+  }
+
+  // Nav buttons
+  document.getElementById('prev-ch-btn').disabled = chIdx === 0;
+  document.getElementById('next-ch-btn').disabled = chIdx >= chapters.length - 1;
+  document.getElementById('mark-read-btn').textContent = ch.read ? 'Marquer non lu' : 'Marquer lu';
+
+  showView('chapter');
+}
+
+function formatChapterContent(text) {
+  // Very light markdown-like formatting
+  let html = text
+    .split('\n\n')
+    .map(para => {
+      if (para.startsWith('# ')) return `<h3>${para.slice(2)}</h3>`;
+      if (para.startsWith('## ')) return `<h3>${para.slice(3)}</h3>`;
+      if (para.startsWith('> ')) return `<blockquote><p>${para.slice(2)}</p></blockquote>`;
+      if (para.startsWith('?')) return `<div class="reflection"><p>${para}</p></div>`;
+      return `<p>${para.replace(/\n/g, '<br>')}</p>`;
+    })
+    .join('');
+  return html;
+}
+
+function navigateChapter(dir) {
+  const book = state.books.find(b => b.id === state.currentBookId);
+  if (!book) return;
+  const chapters = [...book.chapters].sort((a,b) => a.num - b.num);
+  const newIdx = state.currentChapterIdx + dir;
+  if (newIdx < 0 || newIdx >= chapters.length) return;
+  openChapter(state.currentBookId, newIdx);
+}
+
+function markChapterRead() {
+  const book = state.books.find(b => b.id === state.currentBookId);
+  if (!book) return;
+  const chapters = [...book.chapters].sort((a,b) => a.num - b.num);
+  const ch = chapters[state.currentChapterIdx];
+  if (!ch) return;
+  const orig = book.chapters.find(c => c.num === ch.num);
+  orig.read = !orig.read;
+  if (orig.read && book.status === 'en-cours') {
+    const allRead = book.chapters.every(c => c.read);
+    if (allRead) book.status = 'termine';
+  }
+  save();
+  openChapter(state.currentBookId, state.currentChapterIdx);
+  openBook(state.currentBookId); // refresh progress
+  showView('chapter');
+}
+
+// ══════════════════════════════════════
+// ADD BOOK
+// ══════════════════════════════════════
+function openAddBookModal() {
+  document.getElementById('add-book-modal').classList.add('active');
+}
+
+function saveBook() {
+  const title = document.getElementById('book-title-input').value.trim();
+  const author = document.getElementById('book-author-input').value.trim();
+  const year = document.getElementById('book-year-input').value;
+  const status = document.getElementById('book-status-input').value;
+  const totalChapters = parseInt(document.getElementById('book-chapters-input').value) || 0;
+
+  if (!title) { alert('Le titre est requis.'); return; }
+
+  const book = {
+    id: Date.now().toString(),
+    title, author, year, status, totalChapters,
+    chapters: [],
+    createdAt: Date.now()
+  };
+  state.books.push(book);
+  save();
+  closeModal();
+  renderHome();
+  // clear inputs
+  ['book-title-input','book-author-input','book-year-input','book-chapters-input'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('book-status-input').value = 'en-cours';
+}
+
+// ══════════════════════════════════════
+// ADD CHAPTER
+// ══════════════════════════════════════
+function openAddChapterModal() {
+  document.getElementById('add-chapter-modal').classList.add('active');
+}
+
+function saveModalChapter() {
+  const num = parseInt(document.getElementById('modal-ch-num').value);
+  const title = document.getElementById('modal-ch-title').value.trim();
+  const content = document.getElementById('modal-ch-content').value.trim();
+
+  if (!num) { alert('Le numéro est requis.'); return; }
+
+  const book = state.books.find(b => b.id === state.currentBookId);
+  if (!book) return;
+
+  const existing = book.chapters.findIndex(c => c.num === num);
+  const chapter = { num, title, content, read: false };
+  if (existing >= 0) book.chapters[existing] = chapter;
+  else book.chapters.push(chapter);
+
+  save();
+  closeModal();
+  renderChaptersList(book);
+  openBook(state.currentBookId);
+  showView('detail');
+
+  document.getElementById('modal-ch-num').value = '';
+  document.getElementById('modal-ch-title').value = '';
+  document.getElementById('modal-ch-content').value = '';
+}
+
+// ══════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════
+function showView(name) {
+  ['home-view','detail-view','chapter-view'].forEach(v => {
+    document.getElementById(v).style.display = 'none';
+    document.getElementById(v).classList.remove('active');
+  });
+  const fab = document.querySelector('.fab');
+
+  if (name === 'home') {
+    document.getElementById('home-view').style.display = 'flex';
+    document.getElementById('home-view').style.flexDirection = 'column';
+    document.getElementById('home-view').style.height = '100vh';
+    if(fab) fab.style.display = 'flex';
+  } else if (name === 'detail') {
+    document.getElementById('detail-view').style.display = 'flex';
+    document.getElementById('detail-view').classList.add('active');
+    if(fab) fab.style.display = 'none';
+  } else if (name === 'chapter') {
+    document.getElementById('chapter-view').style.display = 'flex';
+    document.getElementById('chapter-view').classList.add('active');
+    if(fab) fab.style.display = 'none';
+  }
+}
+
+function goHome() {
+  state.currentBookId = null;
+  showView('home');
+  renderHome();
+}
+
+function goToDetail() {
+  if (state.currentBookId) {
+    openBook(state.currentBookId);
+  } else {
+    goHome();
+  }
+}
+
+function closeModal() {
+  document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) closeModal();
+  });
+});
+
+// ══════════════════════════════════════
+// SEED DATA (La Voie de l'Ennemi)
+// ══════════════════════════════════════
+function seedDemoBook() {
+  if (state.books.length > 0) return;
+  const demo = {
+    id: 'demo-1',
+    title: "La Voie de l'Ennemi",
+    author: "Tony Hillerman",
+    year: "1970",
+    status: "en-cours",
+    totalChapters: 18,
+    chapters: [
+      {
+        num: 1,
+        title: "La piste de beauté",
+        read: true,
+        content: `# Résumé immersif\n\nLe soleil décline sur le plateau navajo lorsque Joe Leaphorn, lieutenant de la Police Tribale Navajo, reçoit l'appel qui va briser l'été. Un berger a découvert un cadavre non loin de Many Ruins Canyon — un Blanc, sans papiers, sans explication visible.\n\nLeaphorn descend vers la scène avec la méthode qui lui est propre : silencieuse, attentive à ce que le paysage dit autant qu'à ce que les hommes taisent. Le sol parle. Les traces parlent. Quelque chose, pourtant, résiste à la lecture.\n\n> "Le vent du canyon portait une odeur que Leaphorn reconnut aussitôt."\n\n# Décodeur culturel\n\n**Hózhó** — la beauté-harmonie au cœur de la cosmologie navajo. Être "sur la voie de la beauté" signifie vivre en équilibre avec le monde. La mort violente est, par définition, une rupture de cet équilibre.\n\n# Symboles\n\nLe canyon comme espace liminaire : entre les mondes, entre les peuples, entre l'ordre et le chaos. Hillerman établit dès ce premier chapitre la géographie morale du roman.\n\n? En quoi la manière dont Leaphorn observe la scène de crime révèle-t-elle une conception du monde différente de celle d'un détective "occidental" ?`
+      },
+      {
+        num: 2,
+        title: "Bergen McKee",
+        read: true,
+        content: `# Résumé immersif\n\nDe l'autre côté du récit, un second fil s'éveille. Bergen McKee, anthropologue à l'université, prépare un terrain d'été dans la réserve. Il étudie le yee naaldlooshii — le sorcier-loup, celui qui court la nuit dans la peau des bêtes.\n\nSes collègues le regardent avec ce mélange d'admiration et de pitié réservé aux gens trop sérieux. McKee, lui, est convaincu : la sorcellerie navajo n'est pas une superstition folklorique, c'est un mécanisme social, une façon de nommer la peur et de la contenir.\n\n> "La sorcellerie, pensait McKee, était la façon qu'avait ce peuple de parler de ses ennemis intérieurs."\n\n# Décodeur culturel\n\n**Yee naaldlooshii** — littéralement "celui qui va à quatre pattes". Ces êtres, appelés Skinwalkers en anglais, sont au cœur des récits de sorcellerie navajo. Très différents des loups-garous européens : ils représentent l'inversion délibérée de l'ordre moral.\n\n? La définition que McKee donne de la sorcellerie comme "mécanisme social" est-elle un regard éclairant ou une réduction ethnocentrique ?`
+      },
+      {
+        num: 3,
+        title: "La réserve",
+        read: false,
+        content: `# Résumé immersif\n\nMcKee roule vers la réserve. Le paysage se transforme imperceptiblement — moins de fils électriques, plus d'espace entre les maisons, la terre qui reprend ses droits sur l'asphalte.\n\nIl retrouve un contact navajo qui accepte de l'aider, non sans réticence. Les questions sur le yee naaldlooshii ne sont pas innocentes par ici. Demander, c'est déjà attirer l'attention de forces qu'il vaut mieux ne pas nommer.\n\n# Géographie immersive\n\n[Window Rock, Arizona](https://www.google.com/maps/search/Window+Rock+Arizona) — capitale administrative de la Nation Navajo. Lieu réel, point d'entrée symbolique dans la réserve.\n\n# Décodeur culturel\n\n**Chindi** — le fantôme maléfique qui demeure après une mort violente ou impure. Prononcer le nom d'un mort est risqué : cela peut attirer son chindi. Ce tabou explique certaines réticences des personnages navajos à parler des disparus.\n\n? Qu'est-ce que la méfiance des Navajos envers les questions de McKee révèle sur la relation entre recherche académique et communautés étudiées ?`
+      },
+      {
+        num: 4,
+        title: "L'enquête parallèle",
+        read: false,
+        content: `# Résumé immersif\n\nLeaphorn avance sur le dossier du Blanc mort. L'identification tarde. Washington ne coopère pas vite. Mais un détail l'obsède : les mocassins du cadavre présentent une usure caractéristique — quelqu'un qui marche beaucoup, qui connaît ce pays.\n\nParallèlement, des rumeurs de sorcellerie remontent des villages. Des moutons ont été retrouvés morts, marqués de signes. Les anciens se taisent. Les jeunes ont peur.\n\n> "Les Navajos ne croient pas tous au yee naaldlooshii — mais ils n'y croient pas tous."\n\n# Symboles\n\nLes mocassins usés : dans la culture navajo, les chaussures sont intimement liées au chemin de vie. L'usure dit quelque chose de l'histoire d'un homme, de ses errances.\n\n? Comment Hillerman utilise-t-il les deux enquêtes parallèles — celle de Leaphorn et celle de McKee — pour créer une tension narrative sans recourir à l'action directe ?`
+      }
+    ],
+    createdAt: Date.now() - 100000
+  };
+  state.books.push(demo);
+  save();
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+load();
+seedDemoBook();
+showView('home');
+renderHome();
+</script>
+
+<!-- Service Worker registration -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

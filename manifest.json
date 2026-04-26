@@ -1,0 +1,19 @@
+{
+  "name": "Ma Bibliothèque — Compagnon de lecture",
+  "short_name": "Bibliothèque",
+  "description": "Votre bibliothèque de lecture immersive, chapitre par chapitre",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1a1208",
+  "theme_color": "#1a1208",
+  "orientation": "portrait-primary",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%231a1208'/><text y='130' x='96' font-size='110' text-anchor='middle' fill='%23d4a017'>&#128218;</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["books", "education", "lifestyle"]
+}
